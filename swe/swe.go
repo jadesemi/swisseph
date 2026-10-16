@@ -1,7 +1,9 @@
 // Package swe is the Go binding over the vendored Swiss Ephemeris C
 // (Astrodienst 2.10.03), exposing exactly the calls the astro access layer
 // needs: ephemeris-path setup, Julian-day conversion, a body's position, the
-// house cusps with Ascendant and Midheaven, and teardown. Every call returns
+// house cusps with Ascendant and Midheaven — from a Julian day and longitude
+// (Houses) or from a right ascension of the Midheaven and obliquity
+// (HousesARMC) — and teardown. Every call returns
 // Go types, the raw C return value, and the Swiss Ephemeris error string —
 // never a C type.
 //
@@ -112,6 +114,36 @@ func Houses(jdUT float64, geolat, geolon float64, hsys int) (cusps [13]float64, 
 	var ccusps [37]C.double
 	var cascmc [10]C.double
 	rv := C.swe_houses(C.double(jdUT), C.double(geolat), C.double(geolon),
+		C.int(hsys), &ccusps[0], &cascmc[0])
+	for i := range cusps {
+		cusps[i] = float64(ccusps[i])
+	}
+	for i := range ascmc {
+		ascmc[i] = float64(cascmc[i])
+	}
+	return cusps, ascmc, int(rv)
+}
+
+// HousesARMC computes the house cusps and the chart angles from a right
+// ascension of the Midheaven armc (degrees) and the true ecliptic obliquity eps
+// (degrees) at geographic latitude geolat (degrees, north positive) under house
+// system hsys (e.g. CHouseSystemPlacidus), on the calling OS thread. It is the
+// ascensional counterpart of Houses: where Houses takes a Julian day and
+// geographic longitude, this takes the already-computed RAMC and obliquity, the
+// form a directed or progressed Midheaven supplies. It returns the raw
+// thirteen-element cusp array (index 0 unused, indices 1..12 the twelve house
+// cusps in ecliptic-longitude degrees), the raw ten-element angle array
+// (ascmc[0] Ascendant, ascmc[1] Midheaven, the rest further points), and the
+// raw C return value — below zero on a rejected request. Only house systems of
+// at most twelve cusps are in scope; the Gauquelin system, which yields
+// thirty-six, is not. It must run on the thread SetEphePath was called on.
+func HousesARMC(armc, geolat, eps float64, hsys int) (cusps [13]float64, ascmc [10]float64, retval int) {
+	// A 37-element cusp buffer is given to C so no house system can overrun it
+	// (Gauquelin writes 37); only the first thirteen are returned, the range
+	// the in-scope systems fill.
+	var ccusps [37]C.double
+	var cascmc [10]C.double
+	rv := C.swe_houses_armc(C.double(armc), C.double(geolat), C.double(eps),
 		C.int(hsys), &ccusps[0], &cascmc[0])
 	for i := range cusps {
 		cusps[i] = float64(ccusps[i])
