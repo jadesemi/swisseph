@@ -19,7 +19,7 @@
 package swe
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/.. -std=gnu11 -Wno-error=format-security -Wno-unused-result -Wno-format
+#cgo CFLAGS: -I${SRCDIR}/.. -std=gnu11 -Wno-error=format-security -Wno-format-security -Wno-unused-result -Wno-format
 #cgo LDFLAGS: -lm
 #include <stdlib.h>
 #include "swephexp.h"
